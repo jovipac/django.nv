@@ -21,8 +21,15 @@ jobs:
     steps:
       - run: echo "This is an integration step"
       - run: exit 1
+    if: always()
 
   prod:
     runs-on: ubuntu-20.04
     steps:
       - run: echo "This is a deploy step"
+ 
+  artifact:
+    runs-on: ubuntu-20.04
+    steps:
+      - run: echo "This is a Artifact step"
+      - run: echo "hello" > hello.txt
