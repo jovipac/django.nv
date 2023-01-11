@@ -26,19 +26,27 @@ jobs:
           command: |
             echo "This is an integration step"
             exit 1
+          when: always                    # Even if the job fails, continue to the next stages
 
   prod:
     docker:
       - image: python:3.6
     steps:
       - checkout
-      - run: echo "This is a deploy step"
+      - run: echo "This is a deploy step."
 
 workflows:
   version: 2
   django:
     jobs:
       - build
-      - test
-      - integration
-      - prod
+      - test:
+          requires:
+            - build 
+      - integration:
+          requires:
+            - test
+      - prod:
+          type: approval
+          requires:
+            - integration
