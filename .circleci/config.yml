@@ -1,66 +1,35 @@
 jobs:
   build:
-    docker:
-      - image: python:3.6                   # similar to "image" in GitLab
-    steps:
-      - checkout
-      - run: |                              # similar to "script" in GitLab
-          pip install -r requirements.txt
-          python manage.py check
-
-  test:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run: |
-          pip install -r requirements.txt
-          python manage.py test taskManager
-
-  oast-frontend:
     machine: true
     steps:
       - checkout
-      - run:
-          command: docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-output.json --severity high
-          when: on_fail
+      - run: echo "This is a build step"
+
+  test:
+    machine: true
+    steps:
+      - checkout
+      - run: echo "This is a test step"
+
+  odc-backend:
+    machine: true
+    steps:
+      - checkout
+
+      - run: chmod +x ./run-depcheck.sh && ./run-depcheck.sh
+
       - store_artifacts:
-          path: retirejs-output.json
-          destination: retirejs-artifact
-          when: always
-
-  integration:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run:
-          command: |
-            echo "This is an integration step"
-            exit 1
-
-  prod:
-    docker:
-      - image: python:3.6
-    steps:
-      - checkout
-      - run: echo "This is a deploy step."
+          path: reports/dependency-check-report.csv
+          destination: depcheck-artifact
 
 workflows:
   version: 2
-  django:
+  webgoat:
     jobs:
       - build
       - test:
           requires:
-            - build 
-      - oast-frontend:
+            - build
+      - odc-backend:
           requires:
             - test
-      - integration:
-          requires:
-            - test
-      - prod:
-          type: approval
-          requires:
-            - integration
