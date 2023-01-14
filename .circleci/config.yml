@@ -17,18 +17,16 @@ jobs:
           pip install -r requirements.txt
           python manage.py test taskManager
 
-  secret_scanning:
+  oast-frontend:
     machine: true
     steps:
       - checkout
-
       - run:
-          command: docker run --rm -v $(pwd):/src hysnsec/trufflehog file:///src --json > trufflehog-output.json
-          when: on_fail             # Even if the job fails
-
+          command: docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-output.json --severity high
+          when: on_fail
       - store_artifacts:
-          path: trufflehog-output.json
-          destination: trufflehog-artifact
+          path: retirejs-output.json
+          destination: retirejs-artifact
           when: always
 
   integration:
@@ -40,7 +38,6 @@ jobs:
           command: |
             echo "This is an integration step"
             exit 1
-          when: on_fail         # Even if the job fails
 
   prod:
     docker:
@@ -56,13 +53,13 @@ workflows:
       - build
       - test:
           requires:
-            - build
-      - secret_scanning:
+            - build 
+      - oast-frontend:
           requires:
             - test
       - integration:
           requires:
-            - secret_scanning
+            - test
       - prod:
           type: approval
           requires:
