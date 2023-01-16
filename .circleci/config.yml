@@ -1,35 +1,66 @@
 jobs:
   build:
-    machine: true
+    docker:
+      - image: python:3.6                   # similar to "image" in GitLab
     steps:
       - checkout
-      - run: echo "This is a build step"
+      - run: |                              # similar to "script" in GitLab
+          pip install -r requirements.txt
+          python manage.py check
 
   test:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run: |
+          pip install -r requirements.txt
+          python manage.py test taskManager
+
+  integration:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run:
+          command: |
+            echo "This is an integration step"
+            exit 1
+  zap_baseline:
     machine: true
     steps:
       - checkout
-      - run: echo "This is a test step"
 
-  odc-backend:
-    machine: true
-    steps:
-      - checkout
-
-      - run: chmod +x ./run-depcheck.sh && ./run-depcheck.sh
+      - run: |
+          docker pull owasp/zap2docker-stable:2.10.0
+          docker run --user root --rm -v $(pwd):/zap/wrk:rw -w /zap owasp/zap2docker-stable:2.10.0 zap-baseline.py -t ${PROD_URL} -J zap-output.json
 
       - store_artifacts:
-          path: reports/dependency-check-report.csv
-          destination: depcheck-artifact
+          path: zap-output.json
+          destination: zap-artifact
+
+  prod:
+    docker:
+      - image: python:3.6
+    steps:
+      - checkout
+      - run: echo "This is a deploy step."
 
 workflows:
   version: 2
-  webgoat:
+  django:
     jobs:
       - build
       - test:
           requires:
-            - build
-      - odc-backend:
+            - build 
+      - integration:
           requires:
             - test
+      - zap_baseline:
+          requires:
+            - test
+      - prod:
+          type: approval
+          requires:
+            - integration
