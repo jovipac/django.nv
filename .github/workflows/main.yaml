@@ -1,4 +1,4 @@
-name: Django
+name: Django                                  # workflow name
 
 on:
   push:                                       
@@ -40,26 +40,22 @@ jobs:
           source env/bin/activate
           pip install -r requirements.txt
           python manage.py test taskManager
-
-  oast-frontend:
+  sonarqube:
     runs-on: ubuntu-20.04
-    needs: test
     steps:
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '10.x'
-
-      - run: npm install
-      - run: docker run --rm -v $(pwd):/src -w /src hysnsec/retire --outputformat json --outputpath retirejs-report.json --severity high
-        continue-on-error: true
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: RetireJS
-          path: retirejs-report.json
-        if: always()                        # what is this for?
+    - name: SonarQube Scan
+      uses: sonarsource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      with:
+        projectBaseDir: .
+        args: >
+          -Dsonar.projectKey=Django
 
   integration:
     runs-on: ubuntu-20.04
